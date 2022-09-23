@@ -48,17 +48,21 @@ def start_poll():
                                      options=options,
                                      is_anonymous=False,
                                      allows_multiple_answers=False)
-        polls[poll["poll"]["id"]] = [poll["chat"]["id"], poll["message_id"], 0]
+        polls[poll["poll"]["id"]] = [poll["chat"]["id"], poll["message_id"], {}]
     state["polls"] = polls
 
 def finish_poll():
     global updater
     global state
     polls = state["polls"]
-    for poll_id, poll in polls.items():
+    for poll in polls.values():
         try:
             updater.bot.stop_poll(chat_id=poll[0], message_id=poll[1])
-            bread_count = int(poll[2] * 2 - poll[2] / 4)
+
+            # count the number of users who want bread
+            participant_count = len([x for option_ids in poll[2].values() if 0 in option_ids])
+
+            bread_count = int(participant_count * 2 - participant_count / 4)
             updater.bot.send_message(chat_id=poll[0], text=f"Brötchen: {bread_count}")
         except:
             pass
@@ -68,8 +72,9 @@ def poll_answer_callback(update: Update, context: CallbackContext):
     global state
     polls = state["polls"]
     answer=update.poll_answer
-    if answer["option_ids"][0] == 0:
-        polls[answer["poll_id"]][2] += 1
+
+    # store the last answer for each user_id
+    polls[answer["poll_id"]][2].update({answer["user"]: answer["option_ids"]})
     state["polls"] = polls
 
 def initialize_state():
