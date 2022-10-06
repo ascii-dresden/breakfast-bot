@@ -60,7 +60,7 @@ def finish_poll():
             updater.bot.stop_poll(chat_id=poll[0], message_id=poll[1])
 
             # count the number of users who want bread
-            participant_count = len([x for option_ids in poll[2].values() if 0 in option_ids])
+            participant_count = len([option_ids for option_ids in poll[2].values() if 0 in option_ids])
 
             bread_count = int(participant_count * 2 - participant_count / 4)
             updater.bot.send_message(chat_id=poll[0], text=f"Brötchen: {bread_count}")
