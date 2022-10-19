@@ -74,7 +74,7 @@ def poll_answer_callback(update: Update, context: CallbackContext):
     answer=update.poll_answer
 
     # store the last answer for each user_id
-    polls[answer["poll_id"]][2].update({answer["user"]: answer["option_ids"]})
+    polls[answer["poll_id"]][2].update({answer["user"]["id"]: answer["option_ids"]})
     state["polls"] = polls
 
 def initialize_state():
