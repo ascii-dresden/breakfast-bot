@@ -5,9 +5,9 @@ import sys
 import signal
 import time
 import logging
-import schedule
 import shelve
-from telegram import Bot, Update, Chat, ChatMember
+import schedule
+from telegram import Update, ChatMember
 from telegram.ext import Updater, CallbackContext, ChatMemberHandler, PollAnswerHandler
 
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG if os.getenv("DEBUG") is not None else logging.INFO)
@@ -16,7 +16,6 @@ updater: Updater = None
 state: shelve.Shelf = None
 
 def chat_member_callback(update: Update, context: CallbackContext):
-    global state
     chats = state["chats"]
     member = update.my_chat_member.new_chat_member
     if member["status"] in (ChatMember.MEMBER, ChatMember.CREATOR, ChatMember.ADMINISTRATOR):
@@ -29,7 +28,7 @@ def sighandler(signum, frame):
     state.close()
     if updater:
         updater.stop()
-    exit(0)
+    sys.exit(0)
 
 def run_scheduler():
     while True:
@@ -37,8 +36,6 @@ def run_scheduler():
         time.sleep(60)
 
 def start_poll():
-    global updater
-    global state
     polls = state["polls"]
     logging.info("Notifying")
     for chat in state["chats"]:
@@ -52,8 +49,6 @@ def start_poll():
     state["polls"] = polls
 
 def finish_poll():
-    global updater
-    global state
     polls = state["polls"]
     for poll in polls.values():
         try:
@@ -69,7 +64,6 @@ def finish_poll():
     state["polls"] = {}
 
 def poll_answer_callback(update: Update, context: CallbackContext):
-    global state
     polls = state["polls"]
     answer=update.poll_answer
 
@@ -78,7 +72,6 @@ def poll_answer_callback(update: Update, context: CallbackContext):
     state["polls"] = polls
 
 def initialize_state():
-    global state
     if "chats" not in state:
         state["chats"] = set()
     if "polls" not in state:
@@ -88,7 +81,7 @@ def main(args):
     global state
     global updater
     if len(args) < 2:
-        exit(1)
+        sys.exit(1)
     logging.info("Starting breakfast bot")
     state = shelve.open("breakfastbot")
     initialize_state()
@@ -103,7 +96,6 @@ def main(args):
     logging.info("Bot started...")
     run_scheduler()
 
-
 if __name__ == "__main__":
     while True:
         try:
@@ -111,7 +103,7 @@ if __name__ == "__main__":
         except SystemExit:
             logging.info("Catched exit, exiting...")
             state.close()
-            exit(0)
+            sys.exit(0)
         except:
             logging.exception("Something bad happened, recovering in 5 ...")
             time.sleep(5)
