@@ -128,7 +128,7 @@ if __name__ == "__main__":
         try:
             main(sys.argv)
         except SystemExit:
-            logging.info("Catched exit, exiting...")
+            logging.info("Caught exit, exiting...")
             state.close()
             sys.exit(0)
         except:
