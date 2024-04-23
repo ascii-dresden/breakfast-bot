@@ -10,19 +10,28 @@ import schedule
 from telegram import Update, ChatMember
 from telegram.ext import Updater, CallbackContext, ChatMemberHandler, PollAnswerHandler
 
-logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG if os.getenv("DEBUG") is not None else logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s %(levelname)s:%(message)s",
+    level=logging.DEBUG if os.getenv("DEBUG") is not None else logging.INFO,
+)
 
 updater: Updater = None
 state: shelve.Shelf = None
 
+
 def chat_member_callback(update: Update, context: CallbackContext):
     chats = state["chats"]
     member = update.my_chat_member.new_chat_member
-    if member["status"] in (ChatMember.MEMBER, ChatMember.CREATOR, ChatMember.ADMINISTRATOR):
+    if member["status"] in (
+        ChatMember.MEMBER,
+        ChatMember.CREATOR,
+        ChatMember.ADMINISTRATOR,
+    ):
         chats.add(update.effective_chat.id)
     elif update.effective_chat.id in chats:
         chats.remove(update.effective_chat.id)
     state["chats"] = chats
+
 
 def sighandler(signum, frame):
     state.close()
@@ -30,23 +39,28 @@ def sighandler(signum, frame):
         updater.stop()
     sys.exit(0)
 
+
 def run_scheduler():
     while True:
         schedule.run_pending()
         time.sleep(60)
+
 
 def start_poll():
     polls = state["polls"]
     logging.info("Notifying")
     for chat in state["chats"]:
         options = ["Ja, ab 8 Uhr", "Ja, ab 9 Uhr", "Ja, keine Brötchen", "Nein :("]
-        poll = updater.bot.send_poll(chat_id=chat,
-                                     question="Bist du morgen beim Frühstück dabei?",
-                                     options=options,
-                                     is_anonymous=False,
-                                     allows_multiple_answers=False)
+        poll = updater.bot.send_poll(
+            chat_id=chat,
+            question="Bist du morgen beim Frühstück dabei?",
+            options=options,
+            is_anonymous=False,
+            allows_multiple_answers=False,
+        )
         polls[poll["poll"]["id"]] = [poll["chat"]["id"], poll["message_id"], {}]
     state["polls"] = polls
+
 
 def finish_poll():
     polls = state["polls"]
@@ -56,7 +70,13 @@ def finish_poll():
 
             # count the number of users who want bread
             pos_ids = [0, 1]
-            participant_count = len([option_ids for option_ids in poll[2].values() if any(map(lambda v: v in option_ids, pos_ids))])
+            participant_count = len(
+                [
+                    option_ids
+                    for option_ids in poll[2].values()
+                    if any(map(lambda v: v in option_ids, pos_ids))
+                ]
+            )
 
             bread_count = int(participant_count * 2 - participant_count / 4)
             updater.bot.send_message(chat_id=poll[0], text=f"Brötchen: {bread_count}")
@@ -64,19 +84,22 @@ def finish_poll():
             pass
     state["polls"] = {}
 
+
 def poll_answer_callback(update: Update, context: CallbackContext):
     polls = state["polls"]
-    answer=update.poll_answer
+    answer = update.poll_answer
 
     # store the last answer for each user_id
     polls[answer["poll_id"]][2].update({answer["user"]["id"]: answer["option_ids"]})
     state["polls"] = polls
+
 
 def initialize_state():
     if "chats" not in state:
         state["chats"] = set()
     if "polls" not in state:
         state["polls"] = {}
+
 
 def main(args):
     global state
@@ -91,11 +114,14 @@ def main(args):
     schedule.every().thursday.at("10:30").do(start_poll)
     schedule.every().friday.at("07:00").do(finish_poll)
     updater = Updater(args[1])
-    updater.dispatcher.add_handler(ChatMemberHandler(chat_member_callback, ChatMemberHandler.MY_CHAT_MEMBER))
+    updater.dispatcher.add_handler(
+        ChatMemberHandler(chat_member_callback, ChatMemberHandler.MY_CHAT_MEMBER)
+    )
     updater.dispatcher.add_handler(PollAnswerHandler(poll_answer_callback))
     updater.start_polling()
     logging.info("Bot started...")
     run_scheduler()
+
 
 if __name__ == "__main__":
     while True:
