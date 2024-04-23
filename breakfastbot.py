@@ -39,7 +39,7 @@ def start_poll():
     polls = state["polls"]
     logging.info("Notifying")
     for chat in state["chats"]:
-        options = ["Ja", "Ja, keine Brötchen", "Nein :("]
+        options = ["Ja, ab 8 Uhr", "Ja, ab 9 Uhr", "Ja, keine Brötchen", "Nein :("]
         poll = updater.bot.send_poll(chat_id=chat,
                                      question="Bist du morgen beim Frühstück dabei?",
                                      options=options,
@@ -55,7 +55,8 @@ def finish_poll():
             updater.bot.stop_poll(chat_id=poll[0], message_id=poll[1])
 
             # count the number of users who want bread
-            participant_count = len([option_ids for option_ids in poll[2].values() if 0 in option_ids])
+            pos_ids = [0, 1]
+            participant_count = len([option_ids for option_ids in poll[2].values() if any(map(lambda v: v in option_ids, pos_ids))])
 
             bread_count = int(participant_count * 2 - participant_count / 4)
             updater.bot.send_message(chat_id=poll[0], text=f"Brötchen: {bread_count}")
