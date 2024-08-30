@@ -6,25 +6,25 @@ import signal
 import time
 import logging
 import shelve
-import schedule
+import datetime
 from telegram import Update, ChatMember
-from telegram.ext import Updater, CallbackContext, ChatMemberHandler, PollAnswerHandler
+from telegram.ext import Application, ContextTypes, ChatMemberHandler, PollAnswerHandler
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s:%(message)s",
     level=logging.DEBUG if os.getenv("DEBUG") is not None else logging.INFO,
 )
 
-updater: Updater = None
+updater: Application = None
 state: shelve.Shelf = None
 
 
-def chat_member_callback(update: Update, context: CallbackContext):
+async def chat_member_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chats = state["chats"]
     member = update.my_chat_member.new_chat_member
     if member["status"] in (
         ChatMember.MEMBER,
-        ChatMember.CREATOR,
+        ChatMember.OWNER,
         ChatMember.ADMINISTRATOR,
     ):
         chats.add(update.effective_chat.id)
@@ -40,18 +40,12 @@ def sighandler(signum, frame):
     sys.exit(0)
 
 
-def run_scheduler():
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
-
-
-def start_poll():
+async def start_poll(context: ContextTypes.DEFAULT_TYPE):
     polls = state["polls"]
     logging.info("Notifying")
     for chat in state["chats"]:
         options = ["Ja, ab 8 Uhr", "Ja, ab 9 Uhr", "Ja, keine Brötchen", "Nein :("]
-        poll = updater.bot.send_poll(
+        poll = await updater.bot.send_poll(
             chat_id=chat,
             question="Bist du morgen beim Frühstück dabei?",
             options=options,
@@ -60,13 +54,15 @@ def start_poll():
         )
         polls[poll["poll"]["id"]] = [poll["chat"]["id"], poll["message_id"], {}]
     state["polls"] = polls
+    # Stop the poll after 20.5 hours
+    updater.job_queue.run_once(finish_poll, when=53300)
 
 
-def finish_poll():
+async def finish_poll(context: ContextTypes.DEFAULT_TYPE):
     polls = state["polls"]
     for poll in polls.values():
         try:
-            updater.bot.stop_poll(chat_id=poll[0], message_id=poll[1])
+            await updater.bot.stop_poll(chat_id=poll[0], message_id=poll[1])
 
             # count the number of users who want bread
             pos_ids = [0, 1]
@@ -79,13 +75,13 @@ def finish_poll():
             )
 
             bread_count = int(participant_count * 2 - participant_count / 4)
-            updater.bot.send_message(chat_id=poll[0], text=f"Brötchen: {bread_count}")
+            await updater.bot.send_message(chat_id=poll[0], text=f"Brötchen: {bread_count}")
         except:
             pass
     state["polls"] = {}
 
 
-def poll_answer_callback(update: Update, context: CallbackContext):
+async def poll_answer_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     polls = state["polls"]
     answer = update.poll_answer
 
@@ -115,16 +111,15 @@ def main(args):
     initialize_state()
     signal.signal(signal.SIGINT, sighandler)
     signal.signal(signal.SIGTERM, sighandler)
-    schedule.every().thursday.at("10:30").do(start_poll)
-    schedule.every().friday.at("07:00").do(finish_poll)
-    updater = Updater(args[1])
-    updater.dispatcher.add_handler(
+    updater = Application.builder().token(args[1]).build()
+    updater.add_handler(
         ChatMemberHandler(chat_member_callback, ChatMemberHandler.MY_CHAT_MEMBER)
     )
-    updater.dispatcher.add_handler(PollAnswerHandler(poll_answer_callback))
-    updater.start_polling()
+    updater.add_handler(PollAnswerHandler(poll_answer_callback))
+    # Run on Thursdays at 8:30 UTC
+    updater.job_queue.run_daily(start_poll, datetime.time(hour=8, minute=30), days=(4,4))
     logging.info("Bot started...")
-    run_scheduler()
+    updater.run_polling()
 
 
 if __name__ == "__main__":
