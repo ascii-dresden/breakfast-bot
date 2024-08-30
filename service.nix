@@ -17,6 +17,9 @@ in {
             description = "ASCII breakfast bot";
             after = ["network-online.target"];
             wantedBy = ["network-online.target"];
+            environment = {
+                BREAKFASTBOT_DATA_DIR = "/var/lib/breakfastbot";
+            };
 
             serviceConfig = {
                 DynamicUser = "true";
@@ -30,6 +33,7 @@ in {
                 SystemCallFilter = "@system-service @network-io @signal";
                 SystemCallErrorNumber = "EPERM";
                 ExecStart = "${breakfastbot}/bin/breakfastbot ${cfg.telegram_api_key}";
+                StateDirectory = "breakfastbot";
                 Restart = "always";
                 RestartSec = "5";
             };
