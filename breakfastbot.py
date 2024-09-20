@@ -55,7 +55,7 @@ async def start_poll(context: ContextTypes.DEFAULT_TYPE):
         polls[poll["poll"]["id"]] = [poll["chat"]["id"], poll["message_id"], {}]
     state["polls"] = polls
     # Stop the poll after 20.5 hours
-    updater.job_queue.run_once(finish_poll, when=53300)
+    updater.job_queue.run_once(finish_poll, when=73800)
 
 
 async def finish_poll(context: ContextTypes.DEFAULT_TYPE):
