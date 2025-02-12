@@ -51,6 +51,7 @@ async def start_poll(context: ContextTypes.DEFAULT_TYPE):
             options=options,
             is_anonymous=False,
             allows_multiple_answers=False,
+            message_thread_id=12,
         )
         polls[poll["poll"]["id"]] = [poll["chat"]["id"], poll["message_id"], {}]
     state["polls"] = polls
@@ -75,7 +76,11 @@ async def finish_poll(context: ContextTypes.DEFAULT_TYPE):
             )
 
             bread_count = int(participant_count * 2 - participant_count / 4)
-            await updater.bot.send_message(chat_id=poll[0], text=f"Brötchen: {bread_count}")
+            await updater.bot.send_message(
+                chat_id=poll[0],
+                text=f"Brötchen: {bread_count}",
+                message_thread_id=12,
+            )
         except:
             pass
     state["polls"] = {}
