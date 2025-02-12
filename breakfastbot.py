@@ -51,6 +51,7 @@ async def start_poll(context: ContextTypes.DEFAULT_TYPE):
             options=options,
             is_anonymous=False,
             allows_multiple_answers=False,
+            message_thread_id=12,
         )
         polls[poll["poll"]["id"]] = [poll["chat"]["id"], poll["message_id"], {}]
     state["polls"] = polls
