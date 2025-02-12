@@ -16,7 +16,8 @@ in {
         systemd.services.breakfastbot = {
             description = "ASCII breakfast bot";
             after = ["network-online.target"];
-            wantedBy = ["network-online.target"];
+            wantedBy = ["multi-user.target"];
+            wants = ["network-online.target"];
             environment = {
                 BREAKFASTBOT_DATA_DIR = "/var/lib/breakfastbot";
             };
