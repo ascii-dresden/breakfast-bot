@@ -44,19 +44,19 @@ async def start_poll(context: ContextTypes.DEFAULT_TYPE):
     polls = state["polls"]
     logging.info("Notifying")
     for chat in state["chats"]:
-        options = ["Ja, ab 8 Uhr", "Ja, ab 9 Uhr", "Ja, keine Brötchen", "Nein :("]
+        options = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Kommende Woche leider nicht"]
         poll = await updater.bot.send_poll(
             chat_id=chat,
-            question="Bist du morgen beim Frühstück dabei?",
+            question="Wann magst du kommende Woche bei einem Spieleabend dabei sein? (Beginn 17:30)",
             options=options,
             is_anonymous=False,
-            allows_multiple_answers=False,
-            message_thread_id=12,
+            allows_multiple_answers=True,
+            message_thread_id = 56,
         )
         polls[poll["poll"]["id"]] = [poll["chat"]["id"], poll["message_id"], {}]
     state["polls"] = polls
-    # Stop the poll after 20.5 hours
-    updater.job_queue.run_once(finish_poll, when=73800)
+    # Stop the poll after 36 hours
+    updater.job_queue.run_once(finish_poll, when=129600)
 
 
 async def finish_poll(context: ContextTypes.DEFAULT_TYPE):
@@ -65,21 +65,30 @@ async def finish_poll(context: ContextTypes.DEFAULT_TYPE):
         try:
             await updater.bot.stop_poll(chat_id=poll[0], message_id=poll[1])
 
-            # count the number of users who want bread
-            pos_ids = [0, 1]
-            participant_count = len(
-                [
-                    option_ids
-                    for option_ids in poll[2].values()
-                    if any(map(lambda v: v in option_ids, pos_ids))
-                ]
-            )
+            # count the number of users voting for each option
+            vote_count = [0]*6
 
-            bread_count = int(participant_count * 2 - participant_count / 4)
+            for option_ids in poll[2].values():
+                for option_id in option_ids:
+                    vote_count[option_id] += 1
+
+            # drop the last answer option
+            vote_count = vote_count[:5]
+
+            # less than 3 participants does not really make sense
+            # otherwise choose (some) day with the most votes
+            if max(vote_count) < 3:
+                message = f"Diese Woche gibt es leider nicht genug Interesse an einem Spieleabend. Nächte Woche vielleich wieder :)"
+            else:
+                options = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag"]
+                day = options[vote_count.index(max(vote_count))]
+                message = f"Kommende Woche {day} 17:30Uhr findet ein Spieleabend statt! Bitte reagiert mit Daumen hoch oder runter falls ihr (kurzfristig) kommen oder nicht kommen wollt."
+
+
             await updater.bot.send_message(
                 chat_id=poll[0],
-                text=f"Brötchen: {bread_count}",
-                message_thread_id=12,
+                text=message,
+                message_thread_id=56,
             )
         except:
             pass
@@ -107,9 +116,9 @@ def main(args):
     global updater
     if len(args) < 2:
         sys.exit(1)
-    logging.info("Starting breakfast bot")
-    shelve_db = "breakfastbot"
-    shelve_db_dir = os.getenv("BREAKFASTBOT_DATA_DIR")
+    logging.info("Starting gaming bot")
+    shelve_db = "gamingbot"
+    shelve_db_dir = os.getenv("GAMINGBOT_DATA_DIR")
     if shelve_db_dir is not None:
         shelve_db = os.path.join(shelve_db_dir, shelve_db)
     state = shelve.open(shelve_db)
@@ -121,8 +130,9 @@ def main(args):
         ChatMemberHandler(chat_member_callback, ChatMemberHandler.MY_CHAT_MEMBER)
     )
     updater.add_handler(PollAnswerHandler(poll_answer_callback))
-    # Run on Thursdays at 8:30 UTC
-    updater.job_queue.run_daily(start_poll, datetime.time(hour=8, minute=30), days=(4,4))
+    # Run on Saturday at 8:30 UTC
+    # note writing (6,6) to make this a tuple seems stupid
+    updater.job_queue.run_daily(start_poll, datetime.time(hour=8, minute=30), days=(6,6))
     logging.info("Bot started...")
     updater.run_polling()
 
