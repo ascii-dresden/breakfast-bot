@@ -102,9 +102,9 @@ def main(args):
     global updater
     if len(args) < 2:
         sys.exit(1)
-    logging.info("Starting breakfast bot")
-    shelve_db = "breakfastbot"
-    shelve_db_dir = os.getenv("BREAKFASTBOT_DATA_DIR")
+    logging.info("Starting gaming bot")
+    shelve_db = "gamingbot"
+    shelve_db_dir = os.getenv("GAMINGBOT_DATA_DIR")
     if shelve_db_dir is not None:
         shelve_db = os.path.join(shelve_db_dir, shelve_db)
     state = shelve.open(shelve_db)
