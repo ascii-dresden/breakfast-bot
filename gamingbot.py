@@ -78,7 +78,7 @@ async def finish_poll(context: ContextTypes.DEFAULT_TYPE):
             # less than 3 participants does not really make sense
             # otherwise choose (some) day with the most votes
             if max(vote_count) < 3:
-                message = f"Diese Woche gibt es leider nicht genug Interesse an einem Spieleabend. Nächte Woche vielleich wieder :)"
+                message = f"Diese Woche gibt es leider nicht genug Interesse an einem Spieleabend. Nächste Woche vielleicht wieder :)"
             else:
                 options = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag"]
                 day = options[vote_count.index(max(vote_count))]
