@@ -1,24 +1,25 @@
 { config, lib, pkgs, ... }:
 
 let
-    breakfastbot = pkgs.callPackage ./default.nix {};
-    cfg = config.services.breakfastbot;
+    gamingbot = pkgs.callPackage ./default.nix {};
+    cfg = config.services.gamingbot;
 
 in {
-    options.services.breakfastbot.enable = lib.mkEnableOption "breakfastbot";
+    options.services.gamingbot.enable = lib.mkEnableOption "gamingbot";
 
-    options.services.breakfastbot.telegram_api_key = lib.mkOption {
+    options.services.gamingbot.telegram_api_key = lib.mkOption {
         type = lib.types.str;
         example = "0000:AAAABBBB";
     };
 
     config = lib.mkIf cfg.enable {
-        systemd.services.breakfastbot = {
-            description = "ASCII breakfast bot";
+        systemd.services.gamingbot = {
+            description = "ASCII gaming bot";
             after = ["network-online.target"];
-            wantedBy = ["network-online.target"];
+            wantedBy = ["multi-user.target"];
+            wants = ["network-online.target"];
             environment = {
-                BREAKFASTBOT_DATA_DIR = "/var/lib/breakfastbot";
+                GAMINGBOT_DATA_DIR = "/var/lib/gamingbot";
             };
 
             serviceConfig = {
@@ -32,8 +33,8 @@ in {
                 RestrictRealtime = "true";
                 SystemCallFilter = "@system-service @network-io @signal";
                 SystemCallErrorNumber = "EPERM";
-                ExecStart = "${breakfastbot}/bin/breakfastbot ${cfg.telegram_api_key}";
-                StateDirectory = "breakfastbot";
+                ExecStart = "${gamingbot}/bin/gamingbot ${cfg.telegram_api_key}";
+                StateDirectory = "gamingbot";
                 Restart = "always";
                 RestartSec = "5";
             };

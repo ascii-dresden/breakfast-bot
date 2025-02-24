@@ -1,1 +1,1 @@
-# breakfast-bot
+# gaming-bot
